@@ -122,7 +122,8 @@
 				"presentation": {
 					"reveal": "always",
 					"panel": "new"
-				}
+				},
+				"dependsOn": "fix gradle permission"
 			},
 			{
 				"label": "test template docker",
@@ -135,7 +136,8 @@
 				"presentation": {
 					"reveal": "always",
 					"panel": "new"
-				}
+				},
+				"dependsOn": "fix gradle permission"
 			},
 			//////////////////////////////////////////////////////////
 			/////////////////// LOCAL TESTING ////////////////////////
@@ -173,6 +175,7 @@
 						}
 					}
 				],
+				"dependsOn": "mvn install tests"
 			},
 			{
 				"label": "test template local",
@@ -208,6 +211,7 @@
 						}
 					}
 				],
+				"dependsOn": "mvn install tests"
 			},
 			//////////////////////////////////////////////////////////
 			////////////////// OPEN TEST RESULTS /////////////////////
@@ -283,6 +287,11 @@
 				},
 				"problemMatcher": []
 			},
+			{
+				"label": "mvn install tests",
+				"type": "shell",
+				"command": "cd ${workspaceFolder}/tests && mvn install"
+			},
 		]
 	},
 	"launch": {
@@ -332,10 +341,7 @@
 				"type": "node",
 				"request": "launch",
 				"name": "Test Solution (docker)",
-				"preLaunchTask": [
-					"fix gradle permissions",
-					"test solution docker"
-				],
+				"preLaunchTask": "test solution docker",
 				"postDebugTask": "open solution test results",
 				"runtimeExecutable": "echo"
 			},
@@ -343,10 +349,7 @@
 				"type": "node",
 				"request": "launch",
 				"name": "Test Template (docker)",
-				"preLaunchTask": [
-					"fix gradle permissions",
-					"test template docker"
-				],
+				"preLaunchTask": "test template docker",
 				"postDebugTask": "open template test results",
 				"runtimeExecutable": "echo"
 			}
