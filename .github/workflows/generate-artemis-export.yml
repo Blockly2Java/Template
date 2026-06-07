@@ -1,0 +1,86 @@
+name: Generate Artemis Export With Local Script
+
+on:
+  push:
+    branches:
+      - '**' # Runs on all branches. Adjust if you only want it on specific branches (e.g., main)
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  generate-export:
+    runs-on: ubuntu-latest
+    # Map inputs or fallback to GitHub contexts if triggered by a push
+    env:
+      EXERCISE_SHORT_NAME: ${{ inputs.exercise_short_name || github.event.repository.name }}
+      BRANCH: ${{ inputs.branch || github.head_ref || github.ref_name }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+      
+    steps:
+      - name: Checkout parent repo (contains scripts)
+        uses: actions/checkout@v4
+        with:
+          path: parent
+          fetch-depth: 0
+
+      - name: Determine branches for clone operation
+        id: branches
+        run: |
+          # Parent repo uses the dynamic branch (tag or branch name).
+          # Template and solution repos always use main.
+          echo "parent-branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "template-branch=main" >> "$GITHUB_OUTPUT"
+          echo "solution-branch=main" >> "$GITHUB_OUTPUT"
+
+      - name: Run local-export.sh
+        run: |
+          echo "Target Repository: ${{ github.event.repository.name }}"
+          echo "Using Exercise Name: $EXERCISE_SHORT_NAME"
+          echo "Using Branch: $BRANCH"
+          
+          bash parent/.github/scripts/local-export.sh \
+          --name "$EXERCISE_SHORT_NAME" \
+          --template-branch "${{ steps.branches.outputs.template-branch }}" \
+          --solution-branch "${{ steps.branches.outputs.solution-branch }}" \
+          --parent-branch "${{ steps.branches.outputs.parent-branch }}"
+
+      - name: Clean up build artifacts for publishing
+        run: |
+          echo "=== Artemis_Export Directory Contents ==="
+          ls -la Artemis_Export/ || echo "Directory Artemis_Export does not exist in the current path!"
+
+          cd Artemis_Export/
+          rm *-solution.zip || echo "No solution zip files to remove"
+          rm *-exercise.zip || echo "No exercise zip files to remove"
+          rm *-tests.zip || echo "No tests zip files to remove"
+
+          unzip -o "$EXERCISE_SHORT_NAME"-*-*.zip -d ./
+          rm "$EXERCISE_SHORT_NAME"-*-*.zip
+
+          ls -la
+
+      - name: Upload Artemis Export Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # Use the env context to dynamically name the artifact
+          name: artemis-export-${{ env.EXERCISE_SHORT_NAME }}
+          path: Artemis_Export/*
+          retention-days: 120
+
+      - name: Create release ZIP
+        if: github.event_name == 'release'
+        run: |
+          cd Artemis_Export
+          zip -r "../${{ env.EXERCISE_SHORT_NAME }}-${{ github.event.release.tag_name }}-export.zip" .
+          cd ..
+
+      - name: Upload Release Assets
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.EXERCISE_SHORT_NAME }}-${{ github.event.release.tag_name }}-export.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

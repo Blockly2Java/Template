@@ -1,0 +1,336 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"java.server.launchMode": "LightWeight",
+		"java.configuration.updateBuildConfiguration": "disabled",
+		"java.project.importOnFirstTimeOpen": "manual",
+		"java.jvm.args": "-Xmx256m",
+		"java.completion.enabled": false,
+		"java.format.enabled": false,
+		"java.signatureHelp.enabled": false,
+		"java.referencesCodeLens.enabled": false,
+		"java.inlayHints.parameterNames.enabled": "none",
+		"java.debug.settings.onBuildFailureProceed": true
+	},
+	"extensions": {
+		"unwantedRecommendations": [
+			"redhat.java"
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			//////////////////////////////////////////////////////////
+			////////////////////// RUNNING ///////////////////////////
+			{
+				"label": "run solution",
+				"type": "shell",
+				"windows": {
+					"command": "cd solution && gradlew.bat clean run --debug-jvm"
+				},
+				"linux": {
+					"command": "cd solution && ./gradlew clean run --debug-jvm"
+				},
+				"osx": {
+					"command": "cd solution && ./gradlew clean run --debug-jvm"
+				},
+				"isBackground": true,
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"problemMatcher": [
+					{
+						"pattern": [
+							{
+								"regexp": ".",
+								"file": 1,
+								"location": 2,
+								"message": 3
+							}
+						],
+						"background": {
+							"activeOnStart": true,
+							"beginsPattern": "^.*Executing task.*run.*$",
+							"endsPattern": "^.*Listening for transport dt_socket at address: 5005.*$"
+						}
+					}
+				],
+			},
+			{
+				"label": "run template",
+				"type": "shell",
+				"windows": {
+					"command": "cd template && gradlew.bat clean run --debug-jvm"
+				},
+				"linux": {
+					"command": "cd template && ./gradlew clean run --debug-jvm"
+				},
+				"osx": {
+					"command": "cd template && ./gradlew clean run --debug-jvm"
+				},
+				"isBackground": true,
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"problemMatcher": [
+					{
+						"pattern": [
+							{
+								"regexp": ".",
+								"file": 1,
+								"location": 2,
+								"message": 3
+							}
+						],
+						"background": {
+							"activeOnStart": true,
+							"beginsPattern": "^.*Executing task.*run.*$",
+							"endsPattern": "^.*Listening for transport dt_socket at address: 5005.*$"
+						}
+					}
+				],
+			},
+			//////////////////////////////////////////////////////////
+			////////////////// DOCKER TESTING ////////////////////////
+			{
+				"label": "test solution docker",
+				"type": "shell",
+				"command": "docker compose run --rm artemis-solution",
+				"options": {
+					"cwd": "${workspaceFolder}/parent"
+				},
+				"problemMatcher": [],
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				}
+			},
+			{
+				"label": "test template docker",
+				"type": "shell",
+				"command": "docker compose run --rm artemis-template",
+				"options": {
+					"cwd": "${workspaceFolder}/parent"
+				},
+				"problemMatcher": [],
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				}
+			},
+			//////////////////////////////////////////////////////////
+			/////////////////// LOCAL TESTING ////////////////////////
+			{
+				"label": "test solution local",
+				"type": "shell",
+				"windows": {
+					"command": "cd parent && ./gradlew clean testSolutionLocal --debug-jvm"
+				},
+				"linux": {
+					"command": "cd parent && ./gradlew clean testSolutionLocal --debug-jvm"
+				},
+				"osx": {
+					"command": "cd parent && ./gradlew clean testSolutionLocal --debug-jvm"
+				},
+				"isBackground": true,
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"problemMatcher": [
+					{
+						"pattern": [
+							{
+								"regexp": ".",
+								"file": 1,
+								"location": 2,
+								"message": 3
+							}
+						],
+						"background": {
+							"activeOnStart": true,
+							"beginsPattern": "^.*Executing task.*run.*$",
+							"endsPattern": "^.*Listening for transport dt_socket at address: 5005.*$"
+						}
+					}
+				],
+			},
+			{
+				"label": "test template local",
+				"type": "shell",
+				"windows": {
+					"command": "cd parent && ./gradlew clean testTemplateLocal --debug-jvm"
+				},
+				"linux": {
+					"command": "cd parent && ./gradlew clean testTemplateLocal --debug-jvm"
+				},
+				"osx": {
+					"command": "cd parent && ./gradlew clean testTemplateLocal --debug-jvm"
+				},
+				"isBackground": true,
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"problemMatcher": [
+					{
+						"pattern": [
+							{
+								"regexp": ".",
+								"file": 1,
+								"location": 2,
+								"message": 3
+							}
+						],
+						"background": {
+							"activeOnStart": true,
+							"beginsPattern": "^.*Executing task.*run.*$",
+							"endsPattern": "^.*Listening for transport dt_socket at address: 5005.*$"
+						}
+					}
+				],
+			},
+			//////////////////////////////////////////////////////////
+			////////////////// OPEN TEST RESULTS /////////////////////
+			{
+				"label": "open solution test results",
+				"type": "shell",
+				"windows": {
+					"command": "start \"\" \"${workspaceFolder}/parent/build/reports/tests/testSolution/index.html\""
+				},
+				"linux": {
+					"command": "xdg-open \"${workspaceFolder}/parent/build/reports/tests/testSolution/index.html\""
+				},
+				"osx": {
+					"command": "open \"${workspaceFolder}/parent/build/reports/tests/testSolution/index.html\""
+				},
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "open template test results",
+				"type": "shell",
+				"windows": {
+					"command": "start \"\" \"${workspaceFolder}/parent/build/reports/tests/testTemplate/index.html\""
+				},
+				"linux": {
+					"command": "xdg-open \"${workspaceFolder}/parent/build/reports/tests/testTemplate/index.html\""
+				},
+				"osx": {
+					"command": "open \"${workspaceFolder}/parent/build/reports/tests/testTemplate/index.html\""
+				},
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "open solution local test results",
+				"type": "shell",
+				"windows": {
+					"command": "start \"\" \"${workspaceFolder}/parent/build/reports/tests/testSolutionLocal/index.html\""
+				},
+				"linux": {
+					"command": "xdg-open \"${workspaceFolder}/parent/build/reports/tests/testSolutionLocal/index.html\""
+				},
+				"osx": {
+					"command": "open \"${workspaceFolder}/parent/build/reports/tests/testSolutionLocal/index.html\""
+				},
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "open template local test results",
+				"type": "shell",
+				"windows": {
+					"command": "start \"\" \"${workspaceFolder}/parent/build/reports/tests/testTemplateLocal/index.html\""
+				},
+				"linux": {
+					"command": "xdg-open \"${workspaceFolder}/parent/build/reports/tests/testTemplateLocal/index.html\""
+				},
+				"osx": {
+					"command": "open \"${workspaceFolder}/parent/build/reports/tests/testTemplateLocal/index.html\""
+				},
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				},
+				"problemMatcher": []
+			},
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			//////////////////////////////////////////////////////////
+			////////////////////// RUNNING ///////////////////////////
+			{
+				"type": "java",
+				"name": "Run Solution",
+				"request": "attach",
+				"hostName": "localhost",
+				"port": 5005,
+				"preLaunchTask": "run solution"
+			},
+			{
+				"type": "java",
+				"name": "Run Template",
+				"request": "attach",
+				"hostName": "localhost",
+				"port": 5005,
+				"preLaunchTask": "run template"
+			},
+			//////////////////////////////////////////////////////////
+			//////////////////// TESTING LOCAL ///////////////////////
+			{
+				"type": "java",
+				"name": "Test Solution (local)",
+				"request": "attach",
+				"hostName": "localhost",
+				"port": 5005,
+				"preLaunchTask": "test solution local",
+				"postDebugTask": "open solution local test results"
+			},
+			{
+				"type": "java",
+				"name": "Test Template (local)",
+				"request": "attach",
+				"hostName": "localhost",
+				"port": 5005,
+				"preLaunchTask": "test template local",
+				"postDebugTask": "open template local test results"
+			},
+			//////////////////////////////////////////////////////////
+			/////////////////// TESTING DOCKER ///////////////////////
+			{
+				"type": "node",
+				"request": "launch",
+				"name": "Test Solution (docker)",
+				"preLaunchTask": "test solution docker",
+				"postDebugTask": "open solution test results",
+				"runtimeExecutable": "echo"
+			},
+			{
+				"type": "node",
+				"request": "launch",
+				"name": "Test Template (docker)",
+				"preLaunchTask": "test template docker",
+				"postDebugTask": "open template test results",
+				"runtimeExecutable": "echo"
+			}
+		]
+	}
+}

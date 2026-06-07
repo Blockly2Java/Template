@@ -1,0 +1,78 @@
+name: Solution Tests
+on:
+  push:
+permissions:
+  contents: read
+jobs:
+  test-solution:
+    name: Test solution
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/valentinherrmann/artemis-maven-docker:latest
+    steps:
+      - name: Derive sub-repo names
+        id: repos
+        run: |
+          EXERCISE="${GITHUB_REPOSITORY##*/}"   # strips 'Org/' prefix
+          echo "exercise=${EXERCISE}" >> $GITHUB_OUTPUT
+          echo "tests=${GITHUB_REPOSITORY_OWNER}/${EXERCISE}_tests" >> $GITHUB_OUTPUT
+          echo "solution=${GITHUB_REPOSITORY_OWNER}/${EXERCISE}_solution" >> $GITHUB_OUTPUT
+
+      - name: Checkout coordinator
+        uses: actions/checkout@v4
+
+      - name: Checkout tests
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.repos.outputs.tests }}
+          token: ${{ github.token }}
+          path: tests
+
+      - name: Checkout solution
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.repos.outputs.solution }}
+          token: ${{ github.token }}
+          path: solution
+
+      - name: Run solution tests
+        run: ./gradlew clean testSolution --no-daemon
+
+      - name: Display test results
+        if: always()
+        run: |
+          set +e
+          REPORT_DIR="build/test-results/testSolution"
+          if [ ! -d "$REPORT_DIR" ]; then
+            echo "No test results found in $REPORT_DIR"
+            exit 0
+          fi
+          
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          for xml in "$REPORT_DIR"/TEST-*.xml; do
+            [ -f "$xml" ] || continue
+            basename_xml=$(basename "$xml")
+            echo "### $basename_xml" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Use perl script to parse and display test results
+            tr '\n' ' ' < "$xml" | perl .github/workflows/display-results.pl >> $GITHUB_STEP_SUMMARY
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+          done
+          
+          # Also print to the action log
+          for xml in "$REPORT_DIR"/TEST-*.xml; do
+            [ -f "$xml" ] || continue
+            echo "=== $(basename "$xml") ==="
+            tr '\n' ' ' < "$xml" | perl .github/workflows/display-results.pl || true
+          done
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-solution
+          path: build/reports/tests/testSolution

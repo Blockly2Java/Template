@@ -1,0 +1,11 @@
+.gradle/
+.gradle_home/
+target/
+build/
+
+# IDE settings
+.vscode/
+
+# Local dev artifacts
+home/
+bin/

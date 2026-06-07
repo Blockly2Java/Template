@@ -1,0 +1,148 @@
+name: Update Test Overview
+on:
+  push:
+permissions:
+  contents: write
+jobs:
+  update-overview:
+    name: Update README test overview
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/valentinherrmann/artemis-maven-docker:latest
+    steps:
+      - name: Checkout coordinator
+        uses: actions/checkout@v4
+
+      - name: Derive sub-repo names
+        id: repos
+        run: |
+          EXERCISE="${GITHUB_REPOSITORY##*/}"
+          echo "exercise=${EXERCISE}" >> $GITHUB_OUTPUT
+          echo "tests=${GITHUB_REPOSITORY_OWNER}/${EXERCISE}_tests" >> $GITHUB_OUTPUT
+          echo "solution=${GITHUB_REPOSITORY_OWNER}/${EXERCISE}_solution" >> $GITHUB_OUTPUT
+          echo "template=${GITHUB_REPOSITORY_OWNER}/${EXERCISE}_template" >> $GITHUB_OUTPUT
+
+      - name: Checkout tests
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.repos.outputs.tests }}
+          token: ${{ github.token }}
+          path: tests
+
+      - name: Checkout solution
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.repos.outputs.solution }}
+          token: ${{ github.token }}
+          path: solution
+
+      - name: Checkout template
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.repos.outputs.template }}
+          token: ${{ github.token }}
+          path: template
+
+      - name: Run solution tests for overview
+        continue-on-error: true
+        run: ./gradlew clean testSolution --no-daemon
+
+      - name: Save solution reports
+        if: always()
+        run: |
+          mkdir -p .ci-reports/solution
+          if [ -d build/test-results/testSolution ]; then
+            cp -r build/test-results/testSolution/. .ci-reports/solution/
+          fi
+
+      - name: Run template tests for overview
+        continue-on-error: true
+        run: ./gradlew clean testTemplate --no-daemon
+
+      - name: Save template reports
+        if: always()
+        run: |
+          mkdir -p .ci-reports/template
+          if [ -d build/test-results/testTemplate ]; then
+            cp -r build/test-results/testTemplate/. .ci-reports/template/
+          fi
+
+      - name: Generate test overview table (shell)
+        if: always()
+        id: overview
+        shell: bash
+        run: |
+          set +e
+          # Function to parse TEST-*.xml files and produce "classname|status" lines
+          parse_reports() {
+            local report_dir="$1"
+            for xml in "$report_dir"/TEST-*.xml; do
+              [ -f "$xml" ] || continue
+              
+              # Flatten XML to single line
+              local flattened
+              flattened=$(tr '\n' ' ' < "$xml")
+              
+              # Extract each testcase using perl
+              # Pass the flattened XML via environment variable to avoid shell escaping issues
+              FLATTENED="$flattened" perl -e '
+                my $data = $ENV{"FLATTENED"};
+                
+                # Match both <testcase ...>...</testcase> and <testcase .../>
+                while ($data =~ /<testcase([^>]*?)>(.*?)<\/testcase>|<testcase([^>]*?)\/>/g) {
+                  my $attrs = defined($1) ? $1 : $3;
+                  my $content = defined($2) ? $2 : "";
+                  
+                  # Extract classname
+                  if ($attrs =~ /classname="([^"]*)"/) {
+                    my $classname = $1;
+                    # Extract name attribute - match name= not preceded by class
+                    if ($attrs =~ /(?:^|\s)name="([^"]*)"/) {
+                      my $name = $1;
+                      my $id = "$classname.$name";
+                      
+                      # Determine status
+                      if ($content =~ /<failure/ || $content =~ /<error/) {
+                        print "$id|❌\n";
+                      } elsif ($content =~ /<skipped/) {
+                        print "$id|⏭️\n";
+                      } else {
+                        print "$id|✅\n";
+                      }
+                    }
+                  }
+                }
+              ' || true
+            done
+          }
+
+          # Collect results into temp files
+          SOLUTION_FILE=$(mktemp)
+          TEMPLATE_FILE=$(mktemp)
+
+          parse_reports ".ci-reports/solution" | sort -t'|' -k1,1 > "$SOLUTION_FILE"
+          parse_reports ".ci-reports/template" | sort -t'|' -k1,1 > "$TEMPLATE_FILE"
+
+          # Build the markdown table
+          echo "## Test Case Overview" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Auto-updated by CI from latest test runs." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Legend: ✅ passed, ❌ failed/error, ⏭️ skipped, — not present." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Case | Solution | Template |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
+
+          # Get all unique test case names
+          # Use awk for lookup to avoid grep regex issues with [ ] ( ) in test names
+          cut -d'|' -f1 "$SOLUTION_FILE" "$TEMPLATE_FILE" 2>/dev/null | sort -u | while IFS= read -r case_id; do
+            [ -z "$case_id" ] && continue
+            sol=$(awk -F'|' -v id="$case_id" '$1 == id {print $2; exit}' "$SOLUTION_FILE")
+            tpl=$(awk -F'|' -v id="$case_id" '$1 == id {print $2; exit}' "$TEMPLATE_FILE")
+            sol="${sol:-}"
+            tpl="${tpl:-}"
+            echo "| ${case_id} | ${sol} | ${tpl} |" >> $GITHUB_STEP_SUMMARY
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Test overview written to job summary."
